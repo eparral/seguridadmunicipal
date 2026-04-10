@@ -9,6 +9,7 @@ import CommunityView from "./views/neighbor/CommunityView.jsx";
 import ProfileView from "./views/neighbor/ProfileView.jsx";
 import BottomNav from "./components/BottomNav.jsx";
 import StatusBadge from "./components/StatusBadge.jsx";
+import useGeolocation from "./hooks/useGeolocation.js";
 
 const ADMIN_ROLES = new Set(["admin", "funcionario", "municipal"]);
 
@@ -37,6 +38,7 @@ export default function App() {
   const [alertForm, setAlertForm] = useState(emptyAlert);
   const [activeTab, setActiveTab] = useState("inicio");
   const [lastSos, setLastSos] = useState(null);
+  const { requestLocation: requestAlertLocation } = useGeolocation();
 
   const isAdmin = useMemo(() => ADMIN_ROLES.has(session?.role), [session]);
   const activeAlerts = alerts.filter((alert) => (alert.status || "activa") === "activa").length;
@@ -143,14 +145,22 @@ export default function App() {
     setMessage("");
 
     try {
+      let alertLocation = null;
+
+      try {
+        alertLocation = await requestAlertLocation();
+      } catch (locationError) {
+        console.info("[community-alert-location]", locationError.message);
+      }
+
       await apiRequest("/alertas/", {
         method: "POST",
         token: session.access_token,
         body: JSON.stringify({
           tipo: alertForm.tipo,
           mensaje: alertForm.mensaje.trim(),
-          lat: null,
-          lng: null,
+          lat: alertLocation?.latitude ?? null,
+          lng: alertLocation?.longitude ?? null,
         }),
       });
       setAlertForm(emptyAlert);
@@ -283,7 +293,7 @@ export default function App() {
           />
         )}
 
-        {activeTab === "mapa" && <MapView alerts={alerts} />}
+        {activeTab === "mapa" && <MapView alerts={alerts} sector={session.sector} />}
 
         {activeTab === "sos" && <SosView loading={loading} onSosSent={registerSimulatedSos} />}
 

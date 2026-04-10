@@ -63,6 +63,10 @@ Variables Vercel:
 
 ```text
 VITE_API_URL=https://TU-BACKEND.onrender.com
+VITE_MAPBOX_TOKEN=opcional-si-usas-mapbox
+VITE_MAP_CENTER_LAT=-32.4524
+VITE_MAP_CENTER_LNG=-71.2311
+VITE_MAP_ZOOM=13
 ```
 
 Build:
@@ -139,6 +143,10 @@ dist
 
 ```text
 VITE_API_URL=https://TU-BACKEND.onrender.com
+VITE_MAPBOX_TOKEN=opcional-si-usas-mapbox
+VITE_MAP_CENTER_LAT=-32.4524
+VITE_MAP_CENTER_LNG=-71.2311
+VITE_MAP_ZOOM=13
 ```
 
 9. Deploy.
