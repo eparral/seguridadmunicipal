@@ -17,9 +17,9 @@ const adminTabs = [
 ];
 
 const neighborTabs = [
-  { id: "alertas", label: "Alertas cercanas" },
-  { id: "chat", label: "Chat vecinal" },
   { id: "sos", label: "S.O.S" },
+  { id: "alertas", label: "Alertar comunidad" },
+  { id: "chat", label: "Chat vecinal" },
 ];
 
 const sectors = ["Centro", "Valle Hermoso", "Placilla", "Los Molles", "Quinquimo", "La Canela"];
@@ -41,7 +41,7 @@ export default function App() {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatText, setChatText] = useState("");
   const [alertForm, setAlertForm] = useState(emptyAlert);
-  const [activeTab, setActiveTab] = useState("alertas");
+  const [activeTab, setActiveTab] = useState("sos");
 
   const isAdmin = useMemo(() => ADMIN_ROLES.has(session?.role), [session]);
   const activeAlerts = alerts.filter((alert) => (alert.status || "activa") === "activa").length;
@@ -103,7 +103,7 @@ export default function App() {
       });
 
       setSession(data);
-      setActiveTab(ADMIN_ROLES.has(data.role) ? "resumen" : "alertas");
+      setActiveTab(ADMIN_ROLES.has(data.role) ? "resumen" : "sos");
       setMessage(`Sesion iniciada como ${data.nombre}`);
     } catch (error) {
       setMessage(error.message || "No se pudo iniciar sesion.");
@@ -222,7 +222,7 @@ export default function App() {
     setChatMessages([]);
     setMessage("");
     setForm({ email: "", password: "" });
-    setActiveTab("alertas");
+    setActiveTab("sos");
   }
 
   if (!session) {
@@ -410,7 +410,7 @@ function AppFrame({
         <header className="workspace-header">
           <div>
             <p className="eyebrow">{isAdmin ? "Panel municipal" : "Panel vecino"}</p>
-            <h2>{isAdmin ? "Centro de monitoreo" : "Alertas de vecinos cercanos"}</h2>
+            <h2>{isAdmin ? "Centro de monitoreo" : "S.O.S y comunidad"}</h2>
             <p className="muted">
               {session.nombre} | {session.sector} | {session.role}
             </p>
@@ -493,7 +493,7 @@ function AlertsView({ alertForm, alerts, isAdmin, loading, onAlertFieldChange, o
         <section className="panel nearby-panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Primero</p>
+              <p className="eyebrow">Alertar comunidad</p>
               <h2>Alertas de vecinos cercanos</h2>
             </div>
             <span className="counter">{alerts.length}</span>
@@ -503,7 +503,7 @@ function AlertsView({ alertForm, alerts, isAdmin, loading, onAlertFieldChange, o
 
         <section className="panel compact-report-panel">
           <p className="eyebrow">Avisar al sector</p>
-          <h2>Nueva alerta</h2>
+          <h2>Crear alerta vecinal</h2>
           <form className="form" onSubmit={onCreateAlert}>
             <label>
               Tipo
@@ -553,7 +553,7 @@ function NeighborChat({ chatMessages, chatText, loading, sector, setChatText, on
     <section className="panel chat-panel">
       <div className="panel-heading">
         <div>
-          <p className="eyebrow">Despues</p>
+          <p className="eyebrow">Chat vecinal</p>
           <h2>Chat vecinal</h2>
           <p className="muted">Mensajes del sector {sector || "General"}</p>
         </div>
