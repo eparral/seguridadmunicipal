@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import EmergencyContactsManager from "../../components/EmergencyContactsManager.jsx";
 import Modal from "../../components/Modal.jsx";
 import ProtectionAlertButton from "../../components/ProtectionAlertButton.jsx";
@@ -23,7 +23,7 @@ const emptyForm = {
   relacion: "",
 };
 
-export default function ProtectionWomanView({ geolocation, session }) {
+export default function ProtectionWomanView({ ctaLabel = "Activar alerta", geolocation, session, standalone = false }) {
   const [contacts, setContacts] = useState([]);
   const [contactsLoading, setContactsLoading] = useState(true);
   const [savingContact, setSavingContact] = useState(false);
@@ -34,6 +34,13 @@ export default function ProtectionWomanView({ geolocation, session }) {
   const [selectedType, setSelectedType] = useState(alertOptions[0].id);
   const [error, setError] = useState("");
   const [confirmation, setConfirmation] = useState(null);
+  const [cameraLoading, setCameraLoading] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [cameraError, setCameraError] = useState("");
+  const [capturedPreview, setCapturedPreview] = useState("");
+  const streamRef = useRef(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
 
   const statusMessage = useMemo(() => {
     if (geolocation.location) {
@@ -45,10 +52,109 @@ export default function ProtectionWomanView({ geolocation, session }) {
     return "La ubicacion se confirmara antes de enviar la alerta.";
   }, [geolocation.location, geolocation.locating]);
 
+  const cameraStatus = useMemo(() => {
+    if (cameraReady) {
+      return "Camara frontal lista para captura.";
+    }
+    if (cameraLoading) {
+      return "Activando camara frontal...";
+    }
+    return "La captura frontal se tomara al confirmar el S.O.S.";
+  }, [cameraLoading, cameraReady]);
+
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+
+    if (videoRef.current) {
+      videoRef.current.pause?.();
+      videoRef.current.srcObject = null;
+    }
+
+    setCameraLoading(false);
+    setCameraReady(false);
+  }, []);
+
+  const startCamera = useCallback(async () => {
+    setCameraError("");
+    setCameraLoading(true);
+
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("Tu dispositivo no permite activar la camara frontal.");
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "user",
+          width: { ideal: 720 },
+          height: { ideal: 1280 },
+        },
+        audio: false,
+      });
+
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+
+      setCameraReady(true);
+    } catch (cameraRequestError) {
+      console.error("[front-camera]", cameraRequestError);
+      setCameraError(cameraRequestError.message || "No se pudo activar la camara frontal.");
+      stopCamera();
+    } finally {
+      setCameraLoading(false);
+    }
+  }, [stopCamera]);
+
+  const captureFrontImage = useCallback(() => {
+    if (!videoRef.current || !canvasRef.current) {
+      throw new Error("La camara frontal aun no esta lista.");
+    }
+
+    const video = videoRef.current;
+    if (video.readyState < 2) {
+      throw new Error("La camara frontal aun no entrega imagen.");
+    }
+
+    const sourceWidth = video.videoWidth || 720;
+    const sourceHeight = video.videoHeight || 1280;
+    const targetWidth = Math.min(sourceWidth, 720);
+    const scale = targetWidth / sourceWidth;
+    const targetHeight = Math.max(1, Math.round(sourceHeight * scale));
+
+    const canvas = canvasRef.current;
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      throw new Error("No se pudo preparar la captura de imagen.");
+    }
+
+    context.drawImage(video, 0, 0, targetWidth, targetHeight);
+    return canvas.toDataURL("image/jpeg", 0.78);
+  }, []);
+
   useEffect(() => {
     if (!session?.access_token) return;
     loadContacts();
   }, [session?.access_token]);
+
+  useEffect(() => {
+    if (modalOpen) {
+      startCamera();
+    } else {
+      stopCamera();
+    }
+  }, [modalOpen, startCamera, stopCamera]);
+
+  useEffect(() => () => stopCamera(), [stopCamera]);
 
   async function loadContacts() {
     if (!session?.access_token) return;
@@ -81,6 +187,16 @@ export default function ProtectionWomanView({ geolocation, session }) {
   function resetForm() {
     setEditingId(null);
     setForm(emptyForm);
+  }
+
+  function openAlertModal() {
+    setError("");
+    setCameraError("");
+    setModalOpen(true);
+  }
+
+  function closeAlertModal() {
+    setModalOpen(false);
   }
 
   async function handleDelete(contactId) {
@@ -134,6 +250,7 @@ export default function ProtectionWomanView({ geolocation, session }) {
     setConfirmation(null);
 
     try {
+      const capturedImage = captureFrontImage();
       let location = geolocation.location;
 
       if (!location) {
@@ -146,11 +263,13 @@ export default function ProtectionWomanView({ geolocation, session }) {
         lat: location.latitude,
         lng: location.longitude,
         mensaje: `Proteccion Mujer: ${selectedOption.label}`,
+        captura_frontal: capturedImage,
       });
 
       console.info("[proteccion-alerta]", response);
-      setConfirmation(response);
-      setModalOpen(false);
+      setCapturedPreview(capturedImage);
+      setConfirmation({ ...response, capturedImage });
+      closeAlertModal();
     } catch (requestError) {
       console.error("[proteccion-alerta]", requestError);
       setError(requestError.message || "No se pudo activar la alerta protegida.");
@@ -160,15 +279,21 @@ export default function ProtectionWomanView({ geolocation, session }) {
   }
 
   return (
-    <div className="protection-stack">
+    <div className={standalone ? "protection-stack protection-stack-standalone" : "protection-stack"}>
       <ProtectionAlertButton
+        badgeLabel={standalone ? "Mujer Protegida" : "Proteccion Mujer"}
         contactCount={contacts.length}
+        ctaLabel={ctaLabel}
         loading={sendingAlert}
         locating={geolocation.locating}
-        onClick={() => {
-          setError("");
-          setModalOpen(true);
-        }}
+        onClick={openAlertModal}
+        standalone={standalone}
+        subtitle={
+          standalone
+            ? "Acceso directo de emergencia con geolocalizacion, captura frontal y derivacion inmediata."
+            : "Derivacion inmediata a seguridad municipal y a tus contactos configurados."
+        }
+        title={standalone ? "S.O.S protegido" : "Mujer protegida"}
       />
 
       <section className="panel protection-status-panel">
@@ -183,6 +308,10 @@ export default function ProtectionWomanView({ geolocation, session }) {
           <article className="status-card">
             <strong>Ubicacion</strong>
             <span>{statusMessage}</span>
+          </article>
+          <article className="status-card">
+            <strong>Camara frontal</strong>
+            <span>{cameraError || cameraStatus}</span>
           </article>
           <article className="status-card">
             <strong>Contactos</strong>
@@ -206,6 +335,11 @@ export default function ProtectionWomanView({ geolocation, session }) {
           <small>
             {formatTime(confirmation.timestamp)} | {confirmation.ubicacion}
           </small>
+          {capturedPreview && (
+            <div className="camera-proof-card">
+              <img alt="Captura frontal registrada" className="camera-proof-image" src={capturedPreview} />
+            </div>
+          )}
           <div className="delivery-list">
             {confirmation.notificaciones?.map((delivery) => (
               <article className="delivery-card" key={delivery.id || `${delivery.destino_tipo}-${delivery.destinatario_nombre}`}>
@@ -236,12 +370,22 @@ export default function ProtectionWomanView({ geolocation, session }) {
       />
 
       {modalOpen && (
-        <Modal title="Confirmar alerta protegida" onClose={() => setModalOpen(false)}>
+        <Modal title="Confirmar S.O.S protegido" onClose={closeAlertModal}>
           <div className="protection-modal-content">
             <p className="muted">
-              Esta alerta se registrara como prioritaria y se derivara a seguridad municipal y a tus contactos
-              configurados.
+              Se activara la camara frontal, se registrara la ubicacion actual y la alerta se derivara a seguridad
+              municipal junto con tus contactos configurados.
             </p>
+
+            <div className="camera-preview-card">
+              <div className="camera-preview-frame">
+                {cameraLoading && <span className="camera-preview-placeholder">Activando camara frontal...</span>}
+                {!cameraLoading && !cameraError && <video autoPlay className="camera-preview-video" muted playsInline ref={videoRef} />}
+                {cameraError && <span className="camera-preview-placeholder">{cameraError}</span>}
+              </div>
+              <small className="camera-preview-note">La captura se toma automaticamente al confirmar.</small>
+              <canvas className="camera-canvas-hidden" ref={canvasRef} />
+            </div>
 
             <div className="protection-option-grid">
               {alertOptions.map((option) => (
@@ -263,10 +407,15 @@ export default function ProtectionWomanView({ geolocation, session }) {
             </div>
 
             <div className="profile-actions">
-              <button className="protection-alert-button" disabled={sendingAlert} onClick={handleConfirmAlert} type="button">
-                {sendingAlert ? "Enviando..." : "Confirmar alerta"}
+              <button
+                className="protection-alert-button"
+                disabled={sendingAlert || cameraLoading || Boolean(cameraError)}
+                onClick={handleConfirmAlert}
+                type="button"
+              >
+                {sendingAlert ? "Enviando..." : "Confirmar S.O.S"}
               </button>
-              <button className="secondary" disabled={sendingAlert} onClick={() => setModalOpen(false)} type="button">
+              <button className="secondary" disabled={sendingAlert} onClick={closeAlertModal} type="button">
                 Cancelar
               </button>
             </div>

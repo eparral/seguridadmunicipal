@@ -5,6 +5,7 @@ const demoAccounts = [
   { label: "Admin", email: "admin@laligua.cl", password: "123456", role: "Centro municipal" },
   { label: "Funcionario", email: "paz@laligua.cl", password: "123456", role: "Paz ciudadana" },
   { label: "Vecino", email: "vecino@laligua.cl", password: "123456", role: "Comunidad" },
+  { label: "Mujer", email: "mujer@laligua.cl", password: "123456", role: "Acceso protegido" },
 ];
 
 export default function LoginView({ form, health, loading, message, onDemoClick, onFieldChange, onSubmit }) {
@@ -15,7 +16,7 @@ export default function LoginView({ form, health, loading, message, onDemoClick,
         <div>
           <p className="eyebrow">SeguriRural</p>
           <h1>Central municipal y vecinal</h1>
-          <p className="lead">Acceso operativo para vecinos, funcionarios y administradores.</p>
+          <p className="lead">Acceso operativo para vecinos, funcionarias, administradores y mujer protegida.</p>
         </div>
       </section>
 

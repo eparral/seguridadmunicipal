@@ -20,6 +20,13 @@ DEMO_USERS = [
         "role": "vecino",
     },
     {
+        "nombre": "Mujer Protegida Demo",
+        "email": "mujer@laligua.cl",
+        "sector": "Valle Hermoso",
+        "telefono": "+56977777777",
+        "role": "mujer",
+    },
+    {
         "nombre": "Paz Ciudadana Demo",
         "email": "paz@laligua.cl",
         "sector": "Municipalidad de La Ligua",
@@ -61,6 +68,11 @@ DEMO_EMERGENCY_CONTACTS = {
         {"nombre": "Ana Perez", "telefono": "+56970000001", "relacion": "Madre"},
         {"nombre": "Carla Soto", "telefono": "+56970000002", "relacion": "Hermana"},
         {"nombre": "Patricia Rojas", "telefono": "+56970000003", "relacion": "Amiga"},
+    ],
+    "mujer@laligua.cl": [
+        {"nombre": "Rosa Fuentes", "telefono": "+56970000007", "relacion": "Madre"},
+        {"nombre": "Elena Castro", "telefono": "+56970000008", "relacion": "Hermana"},
+        {"nombre": "Paula Moya", "telefono": "+56970000009", "relacion": "Amiga"},
     ],
     "vecino@pirque.cl": [
         {"nombre": "Maria Torres", "telefono": "+56970000004", "relacion": "Madre"},

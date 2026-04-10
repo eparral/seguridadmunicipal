@@ -45,6 +45,7 @@ class AlertaProteccionCreate(BaseModel):
     lat: float
     lng: float
     mensaje: Optional[str] = None
+    captura_frontal: Optional[str] = None
 
 
 class AlertaProteccionUpdate(BaseModel):
@@ -163,7 +164,10 @@ def crear_alerta_proteccion(
     authorization: str = Header(default=""),
 ):
     usuario = require_user(authorization, db)
+    captura_tomada = bool(data.captura_frontal)
     mensaje = (data.mensaje or f"Alerta {PROTECTION_ALERT_TYPES[data.tipo_alerta]} activada").strip()
+    if captura_tomada and "captura frontal" not in mensaje.lower():
+        mensaje = f"{mensaje} | captura frontal registrada"
     contactos = (
         db.query(ContactoEmergencia)
         .filter(ContactoEmergencia.usuario_id == usuario.id)
@@ -185,11 +189,11 @@ def crear_alerta_proteccion(
     db.add(alerta)
     db.flush()
 
-    deliveries = registrar_entregas_proteccion(db, alerta, contactos)
+    deliveries = registrar_entregas_proteccion(db, alerta, contactos, captura_tomada=captura_tomada)
     db.commit()
     db.refresh(alerta)
 
-    return serialize_alerta(alerta, deliveries)
+    return serialize_alerta(alerta, deliveries, captura_tomada=captura_tomada)
 
 
 @router.get("/alertas/")
@@ -242,9 +246,16 @@ def serialize_contacto(contacto: ContactoEmergencia):
     }
 
 
-def serialize_alerta(alerta: AlertaProteccionMujer, deliveries: list[EntregaAlertaProteccion] | None = None):
+def serialize_alerta(
+    alerta: AlertaProteccionMujer,
+    deliveries: list[EntregaAlertaProteccion] | None = None,
+    captura_tomada: bool | None = None,
+):
     alert_deliveries = deliveries or []
     contact_deliveries = [delivery for delivery in alert_deliveries if delivery.destino_tipo == "contacto"]
+    has_capture = captura_tomada
+    if has_capture is None:
+        has_capture = "captura frontal" in (alerta.mensaje or "").lower()
 
     return {
         "id": f"proteccion-{alerta.id}",
@@ -267,6 +278,7 @@ def serialize_alerta(alerta: AlertaProteccionMujer, deliveries: list[EntregaAler
         "timestamp": alerta.created_at,
         "ubicacion": format_location(alerta.lat, alerta.lng),
         "contactos_notificados": len(contact_deliveries),
+        "captura_tomada": has_capture,
         "notificaciones": [serialize_delivery(delivery) for delivery in alert_deliveries],
     }
 

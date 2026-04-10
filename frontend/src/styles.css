@@ -595,6 +595,11 @@ textarea {
   font-weight: 900;
 }
 
+.alert-evidence {
+  background: #eef2ff;
+  color: var(--blue);
+}
+
 .community-stack .panel:first-child {
   border-color: #d7e7df;
 }
@@ -868,10 +873,43 @@ dd {
   gap: 16px;
 }
 
+.protection-stack-standalone {
+  gap: 18px;
+}
+
+.protected-dashboard {
+  width: min(760px, calc(100% - 24px));
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 18px 0 28px;
+  display: grid;
+  gap: 16px;
+}
+
+.protected-dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: start;
+}
+
+.protected-dashboard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
 .protection-hero-panel {
   border-color: #ffd6dd;
   background:
     linear-gradient(180deg, rgba(217, 4, 41, 0.05), rgba(255, 255, 255, 0)),
+    #ffffff;
+}
+
+.protection-hero-panel-standalone {
+  background:
+    linear-gradient(180deg, rgba(217, 4, 41, 0.08), rgba(255, 255, 255, 0)),
     #ffffff;
 }
 
@@ -948,6 +986,50 @@ dd {
 
 .protection-success-panel {
   gap: 10px;
+}
+
+.camera-preview-card,
+.camera-proof-card {
+  display: grid;
+  gap: 8px;
+}
+
+.camera-preview-frame,
+.camera-proof-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0f172a;
+}
+
+.camera-preview-frame {
+  aspect-ratio: 3 / 4;
+  display: grid;
+  place-items: center;
+}
+
+.camera-preview-video,
+.camera-proof-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.camera-preview-placeholder {
+  color: #e2e8f0;
+  font-size: 14px;
+  font-weight: 800;
+  text-align: center;
+  padding: 18px;
+}
+
+.camera-preview-note {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.camera-canvas-hidden {
+  display: none;
 }
 
 .empty-state {
@@ -1102,6 +1184,11 @@ dd {
     padding: 14px 10px calc(136px + env(safe-area-inset-bottom));
   }
 
+  .protected-dashboard {
+    width: calc(100% - 20px);
+    padding: 14px 0 24px;
+  }
+
   .mobile-header {
     align-items: start;
   }
@@ -1161,7 +1248,15 @@ dd {
     display: grid;
   }
 
+  .protected-dashboard-header {
+    display: grid;
+  }
+
   .admin-actions {
+    justify-content: start;
+  }
+
+  .protected-dashboard-actions {
     justify-content: start;
   }
 }

@@ -6,8 +6,9 @@ from .notifications import send_sms, send_whatsapp
 logger = logging.getLogger("segurural.proteccion")
 
 
-def registrar_entregas_proteccion(db, alerta, contactos):
+def registrar_entregas_proteccion(db, alerta, contactos, captura_tomada=False):
     """Prepara la derivacion municipal y deja lista la integracion SMS/WhatsApp."""
+    capture_note = " Captura frontal registrada." if captura_tomada else ""
     deliveries = [
         EntregaAlertaProteccion(
             alerta_id=alerta.id,
@@ -15,7 +16,7 @@ def registrar_entregas_proteccion(db, alerta, contactos):
             destinatario_nombre="Seguridad municipal",
             canal="dashboard",
             estado="registrada",
-            detalle="Alerta prioritaria visible en el panel municipal.",
+            detalle=f"Alerta prioritaria visible en el panel municipal.{capture_note}",
         )
     ]
 
@@ -25,6 +26,8 @@ def registrar_entregas_proteccion(db, alerta, contactos):
         f"ALERTA PROTECCION MUJER | {alerta.nombre_usuario} | {alerta.tipo_alerta} | "
         f"Sector {alerta.sector} | Ubicacion {alerta.lat},{alerta.lng}"
     )
+    if captura_tomada:
+        message = f"{message} | Captura frontal registrada"
 
     for contacto in contactos[:3]:
         deliveries.append(
@@ -37,7 +40,7 @@ def registrar_entregas_proteccion(db, alerta, contactos):
                 estado="simulada",
                 detalle=(
                     f"Simulacion preparada para SMS/WhatsApp con relacion {contacto.relacion}. "
-                    "Sustituir por proveedor real cuando se integre."
+                    f"Sustituir por proveedor real cuando se integre.{capture_note}"
                 ),
             )
         )

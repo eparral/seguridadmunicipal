@@ -20,6 +20,7 @@ export default function AlertList({ alerts, emptyTitle = "Sin alertas cercanas",
           <p>{alert.mensaje || "Sin mensaje"}</p>
           <small>{buildMeta(alert, admin)}</small>
           {alert.prioritaria && <span className="alert-priority">Prioritaria</span>}
+          {alert.captura_tomada && <span className="alert-priority alert-evidence">Captura frontal</span>}
           {admin && (
             <div className="actions-row compact">
               <button className="secondary" onClick={() => onUpdateAlert(alert, "en_proceso")} type="button">

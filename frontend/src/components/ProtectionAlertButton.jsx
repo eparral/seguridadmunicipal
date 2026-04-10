@@ -1,16 +1,21 @@
 export default function ProtectionAlertButton({
+  badgeLabel,
   contactCount,
+  ctaLabel = "Activar alerta",
   locating,
   loading,
   onClick,
+  standalone = false,
+  subtitle = "Derivacion inmediata a seguridad municipal y a tus contactos configurados.",
+  title = "Mujer protegida",
 }) {
   return (
-    <section className="panel protection-hero-panel">
+    <section className={standalone ? "panel protection-hero-panel protection-hero-panel-standalone" : "panel protection-hero-panel"}>
       <div className="panel-heading">
         <div>
-          <p className="eyebrow">Proteccion Mujer</p>
-          <h2>Mujer protegida</h2>
-          <p className="muted">Derivacion inmediata a seguridad municipal y a tus contactos configurados.</p>
+          <p className="eyebrow">{badgeLabel || "Proteccion Mujer"}</p>
+          <h2>{title}</h2>
+          <p className="muted">{subtitle}</p>
         </div>
         <span className="counter">{contactCount}/3</span>
       </div>
@@ -23,7 +28,7 @@ export default function ProtectionAlertButton({
         </div>
 
         <button className="protection-alert-button" disabled={loading || locating} onClick={onClick} type="button">
-          {loading ? "Enviando alerta..." : locating ? "Ubicando..." : "Activar alerta"}
+          {loading ? "Enviando alerta..." : locating ? "Ubicando..." : ctaLabel}
         </button>
       </div>
     </section>

@@ -7,11 +7,13 @@ import MapView from "./views/neighbor/MapView.jsx";
 import SosView from "./views/neighbor/SosView.jsx";
 import CommunityView from "./views/neighbor/CommunityView.jsx";
 import ProfileView from "./views/neighbor/ProfileView.jsx";
+import ProtectedWomanDashboard from "./views/neighbor/ProtectedWomanDashboard.jsx";
 import BottomNav from "./components/BottomNav.jsx";
 import StatusBadge from "./components/StatusBadge.jsx";
 import useGeolocation from "./hooks/useGeolocation.js";
 
 const ADMIN_ROLES = new Set(["admin", "funcionario", "municipal"]);
+const PROTECTED_WOMAN_ROLES = new Set(["mujer", "mujer_protegida"]);
 
 const emptyAlert = {
   tipo: "amarilla",
@@ -41,6 +43,7 @@ export default function App() {
   const neighborLocation = useGeolocation();
 
   const isAdmin = useMemo(() => ADMIN_ROLES.has(session?.role), [session]);
+  const isProtectedWoman = useMemo(() => PROTECTED_WOMAN_ROLES.has(session?.role), [session]);
   const activeAlerts = alerts.filter((alert) => (alert.status || "activa") === "activa").length;
 
   useEffect(() => {
@@ -64,6 +67,7 @@ export default function App() {
 
   useEffect(() => {
     if (!session) return;
+    if (PROTECTED_WOMAN_ROLES.has(session.role)) return;
     refreshAlerts(session);
     if (!ADMIN_ROLES.has(session.role)) {
       refreshChat(session);
@@ -297,6 +301,18 @@ export default function App() {
         onLogout={logout}
         onRefresh={() => refreshAlerts()}
         onUpdateAlert={updateAlert}
+      />
+    );
+  }
+
+  if (isProtectedWoman) {
+    return (
+      <ProtectedWomanDashboard
+        geolocation={neighborLocation}
+        health={health}
+        message={message}
+        onLogout={logout}
+        session={session}
       />
     );
   }
