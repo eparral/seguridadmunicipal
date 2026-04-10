@@ -167,6 +167,9 @@ Produccion con `AUTO_SEED_DEMO=true`:
 vecino@laligua.cl / 123456
 paz@laligua.cl / 123456
 admin@laligua.cl / 123456
+vecino@pirque.cl / 123456
+paz@pirque.cl / 123456
+admin@pirque.cl / 123456
 ```
 
 Seed manual opcional:

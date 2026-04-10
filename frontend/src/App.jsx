@@ -71,7 +71,7 @@ export default function App() {
       const data = await apiRequest("/auth/login", {
         method: "POST",
         body: JSON.stringify({
-          email: form.email.trim(),
+          email: form.email.trim().toLowerCase(),
           password: form.password.trim(),
         }),
       });

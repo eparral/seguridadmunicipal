@@ -56,13 +56,14 @@ def create_access_token(data: dict, expires_minutes: int = JWT_EXPIRES_MIN):
 
 @router.post("/register", response_model=TokenResponse)
 def register(user: UsuarioRegistro, db: Session = Depends(get_db)):
-    existing = db.query(Usuario).filter(Usuario.email == user.email).first()
+    email = user.email.strip().lower()
+    existing = db.query(Usuario).filter(Usuario.email == email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email ya registrado")
 
     usuario = Usuario(
         nombre=user.nombre,
-        email=user.email,
+        email=email,
         password_hash=create_password_hash(user.password),
         sector=user.sector,
     )
@@ -82,7 +83,8 @@ def register(user: UsuarioRegistro, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=TokenResponse)
 def login(user: UsuarioLogin, db: Session = Depends(get_db)):
-    usuario = db.query(Usuario).filter(Usuario.email == user.email).first()
+    email = user.email.strip().lower()
+    usuario = db.query(Usuario).filter(Usuario.email == email).first()
     if not usuario:
         raise HTTPException(status_code=401, detail="Credenciales inválidas")
 

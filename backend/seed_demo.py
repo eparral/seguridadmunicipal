@@ -33,6 +33,27 @@ DEMO_USERS = [
         "telefono": "+56933333333",
         "role": "admin",
     },
+    {
+        "nombre": "Vecino Demo Pirque",
+        "email": "vecino@pirque.cl",
+        "sector": "El Principal",
+        "telefono": "+56944444444",
+        "role": "vecino",
+    },
+    {
+        "nombre": "Paz Ciudadana Demo Pirque",
+        "email": "paz@pirque.cl",
+        "sector": "Municipalidad de Pirque",
+        "telefono": "+56955555555",
+        "role": "funcionario",
+    },
+    {
+        "nombre": "Administrador Demo Pirque",
+        "email": "admin@pirque.cl",
+        "sector": "Municipalidad de Pirque",
+        "telefono": "+56966666666",
+        "role": "admin",
+    },
 ]
 
 

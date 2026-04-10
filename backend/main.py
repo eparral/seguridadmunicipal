@@ -62,7 +62,7 @@ async def lifespan(app: FastAPI):
     try:
         Base.metadata.create_all(bind=engine)
         logger.info("Database initialized")
-        if _env_flag("AUTO_SEED_DEMO"):
+        if _env_flag("AUTO_SEED_DEMO", "true"):
             from backend.seed_demo import seed_demo_users
 
             seed_demo_users()
