@@ -1,6 +1,7 @@
 import { API_URL } from "../../lib/api.js";
+import ProtectionWomanView from "./ProtectionWomanView.jsx";
 
-export default function ProfileView({ activeAlerts, session, onLogout, onRefresh }) {
+export default function ProfileView({ activeAlerts, geolocation, session, onLogout, onRefresh }) {
   return (
     <div className="profile-stack mobile-section">
       <section className="panel profile-card">
@@ -37,6 +38,8 @@ export default function ProfileView({ activeAlerts, session, onLogout, onRefresh
           Cerrar sesion
         </button>
       </div>
+
+      <ProtectionWomanView geolocation={geolocation} session={session} />
     </div>
   );
 }

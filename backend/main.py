@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from backend import admin_alertas, alertas, chat, contactos, placas, push, sos, usuarios
+from backend import admin_alertas, alertas, chat, contactos, placas, proteccion_mujer, push, sos, usuarios
 from backend.database import Base, engine
 
 logger = logging.getLogger("segurural")
@@ -91,6 +91,7 @@ app.include_router(sos.router)
 app.include_router(chat.router)
 app.include_router(alertas.router)
 app.include_router(contactos.router)
+app.include_router(proteccion_mujer.router)
 app.include_router(push.router)
 app.include_router(admin_alertas.router)
 

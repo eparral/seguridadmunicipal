@@ -27,6 +27,10 @@ export default function HomeView({ activeAlerts, alerts, chatMessages, lastSos, 
           <strong>Chat vecinal</strong>
           <span>{chatMessages.length} mensajes</span>
         </button>
+        <button className="action-tile" onClick={() => onGoTo("perfil")} type="button">
+          <strong>Proteccion Mujer</strong>
+          <span>Alerta prioritaria y contactos</span>
+        </button>
       </section>
 
       {lastSos && (

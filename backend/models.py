@@ -120,6 +120,54 @@ class AlertaSOS(Base):
     usuario = relationship("Usuario")
 
 
+class ContactoEmergencia(Base):
+    """Contactos de emergencia del modulo Proteccion Mujer."""
+
+    __tablename__ = "emergency_contacts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    usuario_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    nombre = Column(String, nullable=False)
+    telefono = Column(String, nullable=False)
+    relacion = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class AlertaProteccionMujer(Base):
+    """Alertas prioritarias del modulo Proteccion Mujer."""
+
+    __tablename__ = "protected_alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    usuario_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    nombre_usuario = Column(String, nullable=False)
+    sector = Column(String, nullable=False)
+    tipo_alerta = Column(String, nullable=False)
+    lat = Column(Float)
+    lng = Column(Float)
+    mensaje = Column(Text)
+    estado = Column(String, default="activa")
+    prioridad = Column(String, default="alta")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class EntregaAlertaProteccion(Base):
+    """Registro de derivaciones y simulaciones de contacto para Proteccion Mujer."""
+
+    __tablename__ = "protected_alert_deliveries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    alerta_id = Column(Integer, ForeignKey("protected_alerts.id"), nullable=False, index=True)
+    destino_tipo = Column(String, nullable=False)  # municipal, contacto
+    destinatario_nombre = Column(String, nullable=False)
+    destinatario_telefono = Column(String)
+    canal = Column(String, nullable=False)  # dashboard, sms, whatsapp
+    estado = Column(String, default="simulada")
+    detalle = Column(Text)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
 class Mensaje(Base):
     """Mensajes del chat comunitario."""
 

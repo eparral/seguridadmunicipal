@@ -119,11 +119,30 @@ export default function App() {
     setLoading(true);
 
     try {
-      const path = ADMIN_ROLES.has(currentSession.role)
-        ? "/admin/alertas/"
-        : `/alertas/?sector=${encodeURIComponent(currentSession.sector || "General")}`;
+      if (ADMIN_ROLES.has(currentSession.role)) {
+        const [vecinalResult, proteccionResult] = await Promise.allSettled([
+          apiRequest("/admin/alertas/", { token: currentSession.access_token }),
+          apiRequest("/proteccion-mujer/alertas/?scope=municipal", { token: currentSession.access_token }),
+        ]);
+
+        const vecinalAlerts = vecinalResult.status === "fulfilled" && Array.isArray(vecinalResult.value) ? vecinalResult.value : [];
+        const protectionAlerts =
+          proteccionResult.status === "fulfilled" && Array.isArray(proteccionResult.value) ? proteccionResult.value : [];
+
+        if (vecinalResult.status === "rejected") {
+          console.error("[admin-alerts:vecinal]", vecinalResult.reason);
+        }
+        if (proteccionResult.status === "rejected") {
+          console.error("[admin-alerts:protection]", proteccionResult.reason);
+        }
+
+        setAlerts(sortAlerts([...vecinalAlerts, ...protectionAlerts]));
+        return;
+      }
+
+      const path = `/alertas/?sector=${encodeURIComponent(currentSession.sector || "General")}`;
       const data = await apiRequest(path, { token: currentSession.access_token });
-      setAlerts(Array.isArray(data) ? data : []);
+      setAlerts(sortAlerts(Array.isArray(data) ? data : []));
     } catch (error) {
       setMessage(error.message || "No se pudieron cargar las alertas.");
     } finally {
@@ -204,16 +223,20 @@ export default function App() {
     }
   }
 
-  async function updateAlert(id, status) {
+  async function updateAlert(alert, status) {
     if (!session) return;
     setLoading(true);
     setMessage("");
 
     try {
-      await apiRequest(`/admin/alertas/${id}`, {
+      const isProtectionAlert = alert?.source === "proteccion_mujer";
+      const alertId = alert?.alert_id ?? alert?.id;
+      const path = isProtectionAlert ? `/proteccion-mujer/alertas/${alertId}` : `/admin/alertas/${alertId}`;
+
+      await apiRequest(path, {
         method: "PATCH",
         token: session.access_token,
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(isProtectionAlert ? { estado: status } : { status }),
       });
       await refreshAlerts();
     } catch (error) {
@@ -330,6 +353,7 @@ export default function App() {
         {activeTab === "perfil" && (
           <ProfileView
             activeAlerts={activeAlerts}
+            geolocation={neighborLocation}
             session={session}
             onLogout={logout}
             onRefresh={() => {
@@ -354,4 +378,12 @@ function sectionTitle(activeTab) {
     perfil: "Perfil",
   };
   return titles[activeTab] || "Inicio";
+}
+
+function sortAlerts(items) {
+  return [...items].sort((left, right) => {
+    const rightTime = new Date(right.created_at || right.timestamp || 0).getTime();
+    const leftTime = new Date(left.created_at || left.timestamp || 0).getTime();
+    return rightTime - leftTime;
+  });
 }
