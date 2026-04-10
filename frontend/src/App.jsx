@@ -4,30 +4,22 @@ import { API_URL, apiRequest } from "./lib/api.js";
 const ADMIN_ROLES = new Set(["admin", "funcionario", "municipal"]);
 
 const demoAccounts = [
-  {
-    label: "Admin",
-    email: "admin@laligua.cl",
-    password: "123456",
-    role: "Centro municipal",
-  },
-  {
-    label: "Funcionario",
-    email: "paz@laligua.cl",
-    password: "123456",
-    role: "Paz ciudadana",
-  },
-  {
-    label: "Vecino",
-    email: "vecino@laligua.cl",
-    password: "123456",
-    role: "Comunidad",
-  },
+  { label: "Admin", email: "admin@laligua.cl", password: "123456", role: "Centro municipal" },
+  { label: "Funcionario", email: "paz@laligua.cl", password: "123456", role: "Paz ciudadana" },
+  { label: "Vecino", email: "vecino@laligua.cl", password: "123456", role: "Comunidad" },
 ];
 
-const quickActions = [
-  { title: "SOS rojo", type: "sos_rojo", copy: "Emergencia activa" },
-  { title: "Alerta amarilla", type: "amarilla", copy: "Situacion sospechosa" },
-  { title: "Vehiculo sospechoso", type: "sospechoso", copy: "Patente o seguimiento" },
+const adminTabs = [
+  { id: "resumen", label: "Resumen" },
+  { id: "alertas", label: "Alertas" },
+  { id: "mapa", label: "Mapa" },
+  { id: "cuenta", label: "Cuenta" },
+];
+
+const neighborTabs = [
+  { id: "alertas", label: "Alertas cercanas" },
+  { id: "chat", label: "Chat vecinal" },
+  { id: "sos", label: "S.O.S" },
 ];
 
 const sectors = ["Centro", "Valle Hermoso", "Placilla", "Los Molles", "Quinquimo", "La Canela"];
@@ -46,8 +38,10 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [alerts, setAlerts] = useState([]);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatText, setChatText] = useState("");
   const [alertForm, setAlertForm] = useState(emptyAlert);
-  const [activeTab, setActiveTab] = useState("resumen");
+  const [activeTab, setActiveTab] = useState("alertas");
 
   const isAdmin = useMemo(() => ADMIN_ROLES.has(session?.role), [session]);
   const activeAlerts = alerts.filter((alert) => (alert.status || "activa") === "activa").length;
@@ -76,28 +70,22 @@ export default function App() {
   useEffect(() => {
     if (!session) return;
     refreshAlerts(session);
+    if (!ADMIN_ROLES.has(session.role)) {
+      refreshChat(session);
+    }
   }, [session]);
 
   function updateForm(event) {
-    setForm((current) => ({
-      ...current,
-      [event.target.name]: event.target.value,
-    }));
-  }
-
-  function fillDemo(account) {
-    setForm({
-      email: account.email,
-      password: account.password,
-    });
-    setMessage("");
+    setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   }
 
   function updateAlertForm(event) {
-    setAlertForm((current) => ({
-      ...current,
-      [event.target.name]: event.target.value,
-    }));
+    setAlertForm((current) => ({ ...current, [event.target.name]: event.target.value }));
+  }
+
+  function fillDemo(account) {
+    setForm({ email: account.email, password: account.password });
+    setMessage("");
   }
 
   async function login(event) {
@@ -115,7 +103,7 @@ export default function App() {
       });
 
       setSession(data);
-      setActiveTab("resumen");
+      setActiveTab(ADMIN_ROLES.has(data.role) ? "resumen" : "alertas");
       setMessage(`Sesion iniciada como ${data.nombre}`);
     } catch (error) {
       setMessage(error.message || "No se pudo iniciar sesion.");
@@ -137,6 +125,41 @@ export default function App() {
       setAlerts(Array.isArray(data) ? data : []);
     } catch (error) {
       setMessage(error.message || "No se pudieron cargar las alertas.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function refreshChat(currentSession = session) {
+    if (!currentSession) return;
+
+    try {
+      const sector = encodeURIComponent(currentSession.sector || "General");
+      const data = await apiRequest(`/chat/?sector=${sector}`);
+      setChatMessages(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("[chat]", error);
+      setMessage(error.message || "No se pudo cargar el chat vecinal.");
+    }
+  }
+
+  async function sendChat(event) {
+    event.preventDefault();
+    if (!session || !chatText.trim()) return;
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      await apiRequest("/chat/", {
+        method: "POST",
+        token: session.access_token,
+        body: JSON.stringify({ message: chatText.trim() }),
+      });
+      setChatText("");
+      await refreshChat();
+    } catch (error) {
+      setMessage(error.message || "No se pudo enviar el mensaje.");
     } finally {
       setLoading(false);
     }
@@ -164,7 +187,7 @@ export default function App() {
       });
 
       setAlertForm(emptyAlert);
-      setMessage("Alerta enviada correctamente.");
+      setMessage(payload.tipo === "sos_rojo" ? "S.O.S enviado." : "Alerta enviada correctamente.");
       await refreshAlerts();
     } catch (error) {
       setMessage(error.message || "No se pudo enviar la alerta.");
@@ -196,8 +219,10 @@ export default function App() {
   function logout() {
     setSession(null);
     setAlerts([]);
+    setChatMessages([]);
     setMessage("");
     setForm({ email: "", password: "" });
+    setActiveTab("alertas");
   }
 
   if (!session) {
@@ -220,6 +245,8 @@ export default function App() {
       activeTab={activeTab}
       alertForm={alertForm}
       alerts={alerts}
+      chatMessages={chatMessages}
+      chatText={chatText}
       closedAlerts={closedAlerts}
       health={health}
       highPriorityAlerts={highPriorityAlerts}
@@ -228,10 +255,16 @@ export default function App() {
       message={message}
       session={session}
       setActiveTab={setActiveTab}
+      setChatText={setChatText}
       onAlertFieldChange={updateAlertForm}
       onCreateAlert={createAlert}
       onLogout={logout}
-      onRefresh={() => refreshAlerts()}
+      onRefresh={() => {
+        refreshAlerts();
+        if (!isAdmin) refreshChat();
+      }}
+      onRefreshChat={() => refreshChat()}
+      onSendChat={sendChat}
       onUpdateAlert={updateAlert}
     />
   );
@@ -241,17 +274,11 @@ function LoginView({ form, health, loading, message, onDemoClick, onFieldChange,
   return (
     <main className="login-screen">
       <section className="login-brand">
-        <img
-          className="brand-logo"
-          src="/logo-municipalidad-la-ligua.jpg"
-          alt="Ilustre Municipalidad Comuna de La Ligua"
-        />
+        <img className="brand-logo" src="/logo-municipalidad-la-ligua.jpg" alt="Municipalidad de La Ligua" />
         <div>
           <p className="eyebrow">SeguriRural</p>
           <h1>Central municipal y vecinal</h1>
-          <p className="lead">
-            Acceso operativo para vecinos, funcionarios y administradores de seguridad comunitaria.
-          </p>
+          <p className="lead">Acceso operativo para vecinos, funcionarios y administradores.</p>
         </div>
       </section>
 
@@ -305,12 +332,7 @@ function LoginView({ form, health, loading, message, onDemoClick, onFieldChange,
           <h2>Accesos disponibles</h2>
           <div className="demo-list">
             {demoAccounts.map((account) => (
-              <button
-                className="demo-account"
-                key={account.email}
-                onClick={() => onDemoClick(account)}
-                type="button"
-              >
+              <button className="demo-account" key={account.email} onClick={() => onDemoClick(account)} type="button">
                 <span>{account.label}</span>
                 <strong>{account.email}</strong>
                 <small>{account.role} | clave 123456</small>
@@ -333,6 +355,8 @@ function AppFrame({
   activeTab,
   alertForm,
   alerts,
+  chatMessages,
+  chatText,
   closedAlerts,
   health,
   highPriorityAlerts,
@@ -341,34 +365,35 @@ function AppFrame({
   message,
   session,
   setActiveTab,
+  setChatText,
   onAlertFieldChange,
   onCreateAlert,
   onLogout,
   onRefresh,
+  onRefreshChat,
+  onSendChat,
   onUpdateAlert,
 }) {
+  const tabs = isAdmin ? adminTabs : neighborTabs;
+
   return (
-    <main className="dashboard-shell">
+    <main className={isAdmin ? "dashboard-shell" : "dashboard-shell neighbor-shell"}>
       <aside className="sidebar">
-        <img
-          className="sidebar-logo"
-          src="/logo-municipalidad-la-ligua.jpg"
-          alt="Ilustre Municipalidad Comuna de La Ligua"
-        />
+        <img className="sidebar-logo" src="/logo-municipalidad-la-ligua.jpg" alt="Municipalidad de La Ligua" />
         <div>
           <p className="eyebrow">SeguriRural</p>
           <h1>La Ligua</h1>
         </div>
 
         <nav className="nav-list" aria-label="Secciones">
-          {["resumen", "alertas", "mapa", "cuenta"].map((tab) => (
+          {tabs.map((tab) => (
             <button
-              className={activeTab === tab ? "nav-link active" : "nav-link"}
-              key={tab}
-              onClick={() => setActiveTab(tab)}
+              className={activeTab === tab.id ? "nav-link active" : "nav-link"}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
               type="button"
             >
-              {tab}
+              {tab.label}
             </button>
           ))}
         </nav>
@@ -385,27 +410,24 @@ function AppFrame({
         <header className="workspace-header">
           <div>
             <p className="eyebrow">{isAdmin ? "Panel municipal" : "Panel vecino"}</p>
-            <h2>{isAdmin ? "Centro de monitoreo" : "Seguridad de mi sector"}</h2>
+            <h2>{isAdmin ? "Centro de monitoreo" : "Alertas de vecinos cercanos"}</h2>
             <p className="muted">
               {session.nombre} | {session.sector} | {session.role}
             </p>
           </div>
           <button className="secondary" onClick={onRefresh} disabled={loading} type="button">
-            {loading ? "Actualizando..." : "Actualizar datos"}
+            {loading ? "Actualizando..." : "Actualizar"}
           </button>
         </header>
 
         {message && <p className="notice inline">{message}</p>}
 
-        {activeTab === "resumen" && (
-          <SummaryView
+        {isAdmin && activeTab === "resumen" && (
+          <AdminSummary
             activeAlerts={activeAlerts}
             alerts={alerts}
             closedAlerts={closedAlerts}
             highPriorityAlerts={highPriorityAlerts}
-            isAdmin={isAdmin}
-            loading={loading}
-            onCreateAlert={onCreateAlert}
             onUpdateAlert={onUpdateAlert}
           />
         )}
@@ -422,55 +444,33 @@ function AppFrame({
           />
         )}
 
-        {activeTab === "mapa" && <MapView alerts={alerts} />}
+        {!isAdmin && activeTab === "chat" && (
+          <NeighborChat
+            chatMessages={chatMessages}
+            chatText={chatText}
+            loading={loading}
+            sector={session.sector}
+            setChatText={setChatText}
+            onRefreshChat={onRefreshChat}
+            onSendChat={onSendChat}
+          />
+        )}
 
-        {activeTab === "cuenta" && <AccountView session={session} />}
+        {!isAdmin && activeTab === "sos" && <SosView loading={loading} onCreateAlert={onCreateAlert} />}
+
+        {isAdmin && activeTab === "mapa" && <MapView alerts={alerts} />}
+        {isAdmin && activeTab === "cuenta" && <AccountView session={session} />}
       </section>
     </main>
   );
 }
 
-function SummaryView({
-  activeAlerts,
-  alerts,
-  closedAlerts,
-  highPriorityAlerts,
-  isAdmin,
-  loading,
-  onCreateAlert,
-  onUpdateAlert,
-}) {
+function AdminSummary({ activeAlerts, alerts, closedAlerts, highPriorityAlerts, onUpdateAlert }) {
   return (
     <div className="summary-grid">
       <MetricCard label="Alertas activas" value={activeAlerts} tone="red" />
       <MetricCard label="Alta prioridad" value={highPriorityAlerts} tone="blue" />
       <MetricCard label="Cerradas" value={closedAlerts} tone="green" />
-
-      {!isAdmin && (
-        <section className="panel quick-panel">
-          <p className="eyebrow">Acciones rapidas</p>
-          <h2>Enviar alerta</h2>
-          <div className="quick-actions">
-            {quickActions.map((action) => (
-              <button
-                className="quick-action"
-                disabled={loading}
-                key={action.type}
-                onClick={(event) =>
-                  onCreateAlert(event, {
-                    tipo: action.type,
-                    mensaje: action.copy,
-                  })
-                }
-                type="button"
-              >
-                <strong>{action.title}</strong>
-                <span>{action.copy}</span>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
 
       <section className="panel activity-panel">
         <div className="panel-heading">
@@ -480,34 +480,36 @@ function SummaryView({
           </div>
           <span className="counter">{alerts.length}</span>
         </div>
-        <AlertList alerts={alerts.slice(0, 5)} isAdmin={isAdmin} onUpdateAlert={onUpdateAlert} />
+        <AlertList alerts={alerts.slice(0, 5)} isAdmin={true} onUpdateAlert={onUpdateAlert} />
       </section>
     </div>
   );
 }
 
-function AlertsView({
-  alertForm,
-  alerts,
-  isAdmin,
-  loading,
-  onAlertFieldChange,
-  onCreateAlert,
-  onUpdateAlert,
-}) {
-  return (
-    <div className="content-grid">
-      {!isAdmin && (
-        <section className="panel">
-          <p className="eyebrow">Nuevo reporte</p>
-          <h2>Reportar situacion</h2>
+function AlertsView({ alertForm, alerts, isAdmin, loading, onAlertFieldChange, onCreateAlert, onUpdateAlert }) {
+  if (!isAdmin) {
+    return (
+      <div className="neighbor-alerts-layout">
+        <section className="panel nearby-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Primero</p>
+              <h2>Alertas de vecinos cercanos</h2>
+            </div>
+            <span className="counter">{alerts.length}</span>
+          </div>
+          <AlertList alerts={alerts} isAdmin={false} onUpdateAlert={onUpdateAlert} />
+        </section>
+
+        <section className="panel compact-report-panel">
+          <p className="eyebrow">Avisar al sector</p>
+          <h2>Nueva alerta</h2>
           <form className="form" onSubmit={onCreateAlert}>
             <label>
               Tipo
               <select name="tipo" value={alertForm.tipo} onChange={onAlertFieldChange}>
                 <option value="amarilla">Alerta amarilla</option>
-                <option value="sos_rojo">SOS rojo</option>
-                <option value="sospechoso">Vehiculo o persona sospechosa</option>
+                <option value="sospechoso">Persona o vehiculo sospechoso</option>
               </select>
             </label>
 
@@ -516,42 +518,102 @@ function AlertsView({
               <textarea
                 name="mensaje"
                 onChange={onAlertFieldChange}
-                placeholder="Describe lo ocurrido"
+                placeholder="Describe lo que esta pasando"
                 required
                 rows="4"
                 value={alertForm.mensaje}
               />
             </label>
 
-            <div className="two-cols">
-              <label>
-                Latitud
-                <input name="lat" onChange={onAlertFieldChange} placeholder="-32.452" value={alertForm.lat} />
-              </label>
-              <label>
-                Longitud
-                <input name="lng" onChange={onAlertFieldChange} placeholder="-71.231" value={alertForm.lng} />
-              </label>
-            </div>
-
             <button disabled={loading} type="submit">
-              {loading ? "Enviando..." : "Enviar alerta"}
+              {loading ? "Enviando..." : "Enviar alerta vecinal"}
             </button>
           </form>
         </section>
-      )}
+      </div>
+    );
+  }
 
-      <section className={isAdmin ? "panel full-panel" : "panel"}>
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">{isAdmin ? "Gestion municipal" : "Mi sector"}</p>
-            <h2>Alertas registradas</h2>
-          </div>
-          <span className="counter">{alerts.length}</span>
+  return (
+    <section className="panel full-panel">
+      <div className="panel-heading">
+        <div>
+          <p className="eyebrow">Gestion municipal</p>
+          <h2>Alertas registradas</h2>
         </div>
-        <AlertList alerts={alerts} isAdmin={isAdmin} onUpdateAlert={onUpdateAlert} />
-      </section>
-    </div>
+        <span className="counter">{alerts.length}</span>
+      </div>
+      <AlertList alerts={alerts} isAdmin={true} onUpdateAlert={onUpdateAlert} />
+    </section>
+  );
+}
+
+function NeighborChat({ chatMessages, chatText, loading, sector, setChatText, onRefreshChat, onSendChat }) {
+  return (
+    <section className="panel chat-panel">
+      <div className="panel-heading">
+        <div>
+          <p className="eyebrow">Despues</p>
+          <h2>Chat vecinal</h2>
+          <p className="muted">Mensajes del sector {sector || "General"}</p>
+        </div>
+        <button className="secondary" onClick={onRefreshChat} type="button">
+          Actualizar chat
+        </button>
+      </div>
+
+      <div className="chat-list">
+        {chatMessages.length === 0 ? (
+          <div className="empty-state">
+            <strong>Sin mensajes en el sector</strong>
+            <span>Escribe el primer aviso para tus vecinos.</span>
+          </div>
+        ) : (
+          chatMessages.map((item) => (
+            <article className="chat-message" key={item.id}>
+              <strong>{item.nombre || "Vecino"}</strong>
+              <p>{item.message}</p>
+            </article>
+          ))
+        )}
+      </div>
+
+      <form className="chat-compose" onSubmit={onSendChat}>
+        <input
+          onChange={(event) => setChatText(event.target.value)}
+          placeholder="Escribe un mensaje al sector"
+          value={chatText}
+        />
+        <button disabled={loading || !chatText.trim()} type="submit">
+          Enviar
+        </button>
+      </form>
+    </section>
+  );
+}
+
+function SosView({ loading, onCreateAlert }) {
+  return (
+    <section className="panel sos-panel">
+      <p className="eyebrow">Emergencia</p>
+      <h2>S.O.S comunitario</h2>
+      <p>
+        Usa este boton solo si necesitas avisar inmediatamente a vecinos cercanos y al equipo municipal.
+      </p>
+      <button
+        className="sos-button"
+        disabled={loading}
+        onClick={(event) =>
+          onCreateAlert(event, {
+            tipo: "sos_rojo",
+            mensaje: "S.O.S activado desde panel vecino",
+          })
+        }
+        type="button"
+      >
+        {loading ? "Enviando S.O.S..." : "Activar S.O.S"}
+      </button>
+    </section>
   );
 }
 
@@ -576,10 +638,7 @@ function MapView({ alerts }) {
             <span
               className={`map-pin level-${alert.nivel || "1"}`}
               key={alert.id || index}
-              style={{
-                left: `${18 + ((index * 13) % 64)}%`,
-                top: `${24 + ((index * 17) % 54)}%`,
-              }}
+              style={{ left: `${18 + ((index * 13) % 64)}%`, top: `${24 + ((index * 17) % 54)}%` }}
               title={alert.tipo}
             />
           ))}
@@ -610,10 +669,6 @@ function AccountView({ session }) {
         <h2>{session.nombre}</h2>
         <dl>
           <div>
-            <dt>Correo</dt>
-            <dd>{session.email || "Sesion autenticada"}</dd>
-          </div>
-          <div>
             <dt>Rol</dt>
             <dd>{session.role}</dd>
           </div>
@@ -641,8 +696,8 @@ function AlertList({ alerts, isAdmin, onUpdateAlert }) {
   if (!alerts.length) {
     return (
       <div className="empty-state">
-        <strong>Sin alertas registradas</strong>
-        <span>Cuando existan reportes, apareceran en esta seccion.</span>
+        <strong>Sin alertas cercanas</strong>
+        <span>Cuando un vecino reporte algo en tu sector, aparecera aqui.</span>
       </div>
     );
   }
