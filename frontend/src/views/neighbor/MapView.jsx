@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import LeafletMap from "../../components/LeafletMap.jsx";
-import useGeolocation from "../../hooks/useGeolocation.js";
 import { DEFAULT_MAP_CENTER } from "../../lib/mapConfig.js";
 
-export default function MapView({ alerts, sector }) {
+export default function MapView({ alerts, geolocation, sector }) {
   const [selectedAlert, setSelectedAlert] = useState(null);
-  const { error, locating, location, requestLocation } = useGeolocation();
+  const { error, locating, location, requestLocation } = geolocation;
 
   const visibleAlerts = useMemo(
     () => alerts.filter((alert) => Number.isFinite(Number(alert.lat)) && Number.isFinite(Number(alert.lng))),
@@ -32,10 +31,6 @@ export default function MapView({ alerts, sector }) {
     requestLocation().catch((geoError) => console.info("[map-location]", geoError.message));
   }, [requestLocation]);
 
-  useEffect(() => {
-    locateUser();
-  }, [locateUser]);
-
   return (
     <section className="panel real-map-panel mobile-section">
       <div className="panel-heading">
@@ -49,7 +44,8 @@ export default function MapView({ alerts, sector }) {
         </button>
       </div>
 
-      {error && <p className="notice danger-notice">No se pudo obtener tu ubicacion. Se muestra el centro comunal.</p>}
+      {locating && <p className="notice">Solicitando permiso de ubicacion...</p>}
+      {error && <p className="notice danger-notice">{error}</p>}
 
       <LeafletMap alerts={alerts} center={center} userLocation={location} onSelectAlert={setSelectedAlert} />
 

@@ -38,7 +38,7 @@ export default function App() {
   const [alertForm, setAlertForm] = useState(emptyAlert);
   const [activeTab, setActiveTab] = useState("inicio");
   const [lastSos, setLastSos] = useState(null);
-  const { requestLocation: requestAlertLocation } = useGeolocation();
+  const neighborLocation = useGeolocation();
 
   const isAdmin = useMemo(() => ADMIN_ROLES.has(session?.role), [session]);
   const activeAlerts = alerts.filter((alert) => (alert.status || "activa") === "activa").length;
@@ -97,9 +97,16 @@ export default function App() {
         }),
       });
 
+      const loggedAsAdmin = ADMIN_ROLES.has(data.role);
       setSession(data);
-      setActiveTab(ADMIN_ROLES.has(data.role) ? "admin" : "inicio");
+      setActiveTab(loggedAsAdmin ? "admin" : "inicio");
       setMessage("");
+
+      if (!loggedAsAdmin) {
+        neighborLocation.requestLocation().catch((geoError) => {
+          console.info("[login-location]", geoError.message);
+        });
+      }
     } catch (error) {
       setMessage(error.message || "No se pudo iniciar sesion.");
     } finally {
@@ -145,12 +152,14 @@ export default function App() {
     setMessage("");
 
     try {
-      let alertLocation = null;
+      let alertLocation = neighborLocation.location;
 
-      try {
-        alertLocation = await requestAlertLocation();
-      } catch (locationError) {
-        console.info("[community-alert-location]", locationError.message);
+      if (!alertLocation) {
+        try {
+          alertLocation = await neighborLocation.requestLocation();
+        } catch (locationError) {
+          console.info("[community-alert-location]", locationError.message);
+        }
       }
 
       await apiRequest("/alertas/", {
@@ -281,6 +290,12 @@ export default function App() {
       </header>
 
       {message && <p className="notice mobile-notice">{message}</p>}
+      {neighborLocation.locating && activeTab !== "mapa" && (
+        <p className="notice mobile-notice">Solicitando permiso de ubicacion...</p>
+      )}
+      {neighborLocation.error && activeTab !== "mapa" && (
+        <p className="notice danger-notice mobile-notice">{neighborLocation.error}</p>
+      )}
 
       <section className="mobile-content">
         {activeTab === "inicio" && (
@@ -293,7 +308,7 @@ export default function App() {
           />
         )}
 
-        {activeTab === "mapa" && <MapView alerts={alerts} sector={session.sector} />}
+        {activeTab === "mapa" && <MapView alerts={alerts} geolocation={neighborLocation} sector={session.sector} />}
 
         {activeTab === "sos" && <SosView loading={loading} onSosSent={registerSimulatedSos} />}
 

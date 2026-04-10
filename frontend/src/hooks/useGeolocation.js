@@ -29,7 +29,7 @@ export default function useGeolocation() {
           resolve(coords);
         },
         (geoError) => {
-          const message = geoError.message || "No se pudo obtener tu ubicacion.";
+          const message = geolocationMessage(geoError);
           setError(message);
           setLocating(false);
           reject(new Error(message));
@@ -44,4 +44,20 @@ export default function useGeolocation() {
   }, []);
 
   return { error, locating, location, requestLocation };
+}
+
+function geolocationMessage(error) {
+  if (error?.code === 1) {
+    return "Permiso de ubicacion denegado. Activalo en el navegador para ver tu posicion y enviar alertas con coordenadas.";
+  }
+
+  if (error?.code === 2) {
+    return "No se pudo detectar tu ubicacion actual. Revisa GPS, Wi-Fi o datos moviles.";
+  }
+
+  if (error?.code === 3) {
+    return "La solicitud de ubicacion tardo demasiado. Intenta nuevamente.";
+  }
+
+  return error?.message || "No se pudo obtener tu ubicacion.";
 }
