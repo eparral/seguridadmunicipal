@@ -22,7 +22,7 @@ JWT_ALG = "HS256"
 PROTECTION_ALERT_TYPES = {
     "salud": "Salud",
     "incidente": "Incidente",
-    "robo_violencia": "Robo / Violencia",
+    "robo_violencia": "Violencia",
     "emergencia_general": "Emergencia general",
 }
 

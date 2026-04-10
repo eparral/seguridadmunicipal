@@ -922,6 +922,11 @@ dd {
   gap: 12px;
 }
 
+.camera-live-panel {
+  display: grid;
+  gap: 12px;
+}
+
 .protection-summary,
 .status-card,
 .contact-card,
@@ -1030,6 +1035,14 @@ dd {
 
 .camera-canvas-hidden {
   display: none;
+}
+
+.camera-video-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .empty-state {
