@@ -8,6 +8,8 @@ services:
     envVars:
       - key: ENV
         value: production
+      - key: AUTO_SEED_DEMO
+        value: "true"
       - key: FRONTEND_URL
         sync: false
       - key: DATABASE_URL

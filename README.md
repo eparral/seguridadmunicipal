@@ -51,6 +51,7 @@ Variables Render:
 
 ```text
 ENV=production
+AUTO_SEED_DEMO=true
 FRONTEND_URL=https://TU-FRONTEND.vercel.app
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DBNAME
 JWT_SECRET=un-secreto-largo-y-seguro
@@ -95,6 +96,7 @@ git push -u origin main
 FRONTEND_URL=https://TU-FRONTEND.vercel.app
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DBNAME
 JWT_SECRET=un-secreto-largo-y-seguro
+AUTO_SEED_DEMO=true
 ```
 
 7. Deploy.
@@ -159,19 +161,19 @@ paz@pirque.cl / 123456
 admin@pirque.cl / 123456
 ```
 
-Produccion:
-
-```bash
-cd backend
-python seed_demo.py
-```
-
-Credenciales produccion:
+Produccion con `AUTO_SEED_DEMO=true`:
 
 ```text
 vecino@laligua.cl / 123456
 paz@laligua.cl / 123456
 admin@laligua.cl / 123456
+```
+
+Seed manual opcional:
+
+```bash
+cd backend
+python seed_demo.py
 ```
 
 Para cambiar la clave:

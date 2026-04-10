@@ -17,6 +17,11 @@ from backend.database import Base, engine
 logger = logging.getLogger("segurural")
 
 
+def _env_flag(name: str, default: str = "false") -> bool:
+    value = os.getenv(name, default).strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
 def _normalize_origin(value: str) -> str | None:
     origin = (value or "").strip().rstrip("/")
     if not origin:
@@ -57,6 +62,11 @@ async def lifespan(app: FastAPI):
     try:
         Base.metadata.create_all(bind=engine)
         logger.info("Database initialized")
+        if _env_flag("AUTO_SEED_DEMO"):
+            from backend.seed_demo import seed_demo_users
+
+            seed_demo_users()
+            logger.info("Demo users seeded")
     except Exception:
         logger.exception("Database initialization failed")
         if os.getenv("ENV", "development").lower() != "production":
